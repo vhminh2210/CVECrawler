@@ -9,7 +9,7 @@ SAMPLE = os.path.join(ROOT, "2023", "50xxx", "CVE-2023-50249.json")
 
 print(SAMPLE)
 
-def get_commit_code(path, commit_hash):
+def crawlCommit(path, commit_hash):
     res = {}
     local_path = os.path.join("tmp_dir", path.split('/')[-1])
 
@@ -24,13 +24,14 @@ def get_commit_code(path, commit_hash):
     c_time = repo.commit(commit_hash).authored_datetime.timestamp()
 
     patch = ""
+    softver = ""
     for t in repo.tags:
         ct = t.commit
 
         if c_time >= ct.authored_datetime.timestamp():
-            patch = t
+            softver = str(t)
         else:
-            patch = t
+            patch = str(t)
             break
     
     repo = Repository(path, clone_repo_to= 'tmp_dir')
@@ -39,7 +40,11 @@ def get_commit_code(path, commit_hash):
         if commit.hash != commit_hash:
             continue
         for f in commit.modified_files:
-           res[f.filename] = {'src':f.source_code, 'patched_version':patch} 
+           res[f.filename] = {
+               'src':f.source_code, 
+               'patched_version':patch, 
+               'software_version':softver
+            } 
         break
 
     return res
@@ -53,23 +58,54 @@ def parseCommit(url):
         path.append(node)
     path = '/'.join(path)
     path += '.git'
-    print(path)
 
     commit_hash = nodes[-1]
-    print(commit_hash)
+    dict = {
+        "url" : url,
+        "repo" : path,
+        "hashcode" : commit_hash,
+        "modified_files" : crawlCommit(path, commit_hash)
+    }
+    return dict
 
-    dict = get_commit_code(path, commit_hash)
-    for k in dict.keys():
-        print(dict[k]['patched_version'])
+def parseMetrics(metrics):
+    ks = metrics.keys()
+    ks = sorted(ks, reverse= True)
+    for k in ks:
+        if k == 'other':
+            continue
+        # Pick the latest cvss version
+        dict = {
+            'scoreType' : k,
+            'baseScore' : metrics[k]['baseScore'],
+            'vectorString' : metrics[k]['vectorString']
+        }
+        return dict
+    
+    return None
+
 
 def crawl_container(ctn):
     # Vulnerable source code & Patched version :
+    container = {}
+
+    # Crawling commits
+    commits = []
     if 'references' in ctn.keys():
         for url_dict in ctn['references']:
             url = url_dict['url']
             if "https://github.com/" in url and "/commit/" in url:
-                parseCommit(url)
+                commits.append(parseCommit(url))
+    container['commits'] = commits
 
+    # Crawling metrics
+    if 'metrics' in ctn.keys():
+        metric_dict = parseMetrics(ctn['metrics'])
+        if dict != None:
+            container['metrics'] = metric_dict
+
+    
+        
 
 def crawl(json_path):
     with open(json_path, 'r') as file:
