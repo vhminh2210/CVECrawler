@@ -9,17 +9,6 @@ SAMPLE = os.path.join(ROOT, "2023", "50xxx", "CVE-2023-50249.json")
 
 print(SAMPLE)
 
-def is_commit_after(repo, commit_hash1, commit_hash2):
-    try:
-        # Run git command to check if commit2 is an ancestor of commit1
-        is_after = repo.git.merge_base(commit_hash1, commit_hash2) == commit_hash2
-
-        return is_after
-
-    except Exception as e:
-        print(f"Error checking commit order: {e}")
-        return None
-
 def get_commit_code(path, commit_hash):
     res = {}
     local_path = os.path.join("tmp_dir", path.split('/')[-1])
