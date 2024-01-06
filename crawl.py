@@ -74,7 +74,7 @@ def parseMetrics(metrics):
     dict = []
     for k in ks:
         type_str = list(metrics[k].keys())[0]
-        if type_str == 'other':
+        if type_str not in ['cvssV3_1', 'cvssV3_0', 'cvssV2_0']:
             continue
         dict.append({
             'scoreType' : list(metrics[k].keys())[0],
@@ -155,7 +155,7 @@ def crawl_container(ctn):
     return container
         
 
-def crawl(json_path):
+def crawlPath(json_path, out_dir='data', out_file='data.json'):
     formatted_data = {}
     with open(json_path, 'r') as file:
         data = json.load(file)
@@ -166,8 +166,40 @@ def crawl(json_path):
             formatted_data['adp'] = crawl_container(adp)
         file.close()
 
-    with open('sample.json', 'w') as file:
+    with open(os.path.join(out_dir, out_file), 'a') as file:
         json.dump(formatted_data, file, indent= 2)
         file.close()
 
-crawl(SAMPLE)
+class CVECrawler:
+    def __init__(self, cve_dir, tmp_dir, out_dir='data', out_file='data.json'):
+        self.cve_dir = cve_dir
+        self.tmp_dir = tmp_dir
+        self.out_dir = out_dir
+        self.out_file = out_file
+    
+    def crawl(self):
+        dirs = []
+        if not os.path.exists(self.out_dir):
+            os.mkdir(self.out_dir)
+
+        for dir in os.listdir(self.cve_dir):
+            dirs.append(os.path.join(self.cve_dir, dir))
+
+        while len(dirs) > 0:
+            dir = dirs[-1]
+            dirs.pop()
+            if os.path.isdir(dir):
+                for subdir in os.listdir(dir):
+                    dirs.append(os.path.join(dir, subdir))
+            else:
+                # json file found
+                if(dir.split('.')[-1] == 'json'):
+                    print(f"Crawling through {dir} ...")
+                    crawlPath(dir, self.out_dir, self.out_file)
+
+# crawler = CVECrawler(
+#     cve_dir= 'cvelistV5-main/cves/2023/0xxx',
+#     tmp_dir= 'tmp_dir',
+# )
+
+# crawler.crawl()

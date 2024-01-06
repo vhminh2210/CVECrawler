@@ -1,0 +1,1 @@
+python run.py --cve_dir='cvelistV5-main/cves/2023/0xxx'
