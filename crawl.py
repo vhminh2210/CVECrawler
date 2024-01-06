@@ -11,7 +11,7 @@ print(SAMPLE)
 
 def crawlCommit(path, commit_hash):
     res = {}
-    local_path = os.path.join("tmp_dir", path.split('/')[-1])
+    local_path = os.path.join("tmp_dir", path.split('/')[-2], path.split('/')[-1])
 
     if not os.path.exists(local_path):
         os.makedirs(local_path)
@@ -71,16 +71,16 @@ def parseCommit(url):
 def parseMetrics(metrics):
     ks = len(metrics)
     ks = sorted(range(ks), key= lambda x:list(metrics[x].keys())[0])
+    dict = []
     for k in ks:
         type_str = list(metrics[k].keys())[0]
         if type_str == 'other':
             continue
-        # Pick the latest cvss version
-        dict = {
+        dict.append({
             'scoreType' : k,
             'baseScore' : metrics[k][type_str]['baseScore'],
             'vectorString' : metrics[k][type_str]['vectorString']
-        }
+        })
         return dict
     
     return None
