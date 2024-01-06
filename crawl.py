@@ -77,7 +77,7 @@ def parseMetrics(metrics):
         if type_str == 'other':
             continue
         dict.append({
-            'scoreType' : k,
+            'scoreType' : list(metrics[k].keys())[0],
             'baseScore' : metrics[k][type_str]['baseScore'],
             'vectorString' : metrics[k][type_str]['vectorString']
         })
