@@ -9,9 +9,9 @@ SAMPLE = os.path.join(ROOT, "2023", "50xxx", "CVE-2023-50249.json")
 
 print(SAMPLE)
 
-def crawlCommit(path, commit_hash):
+def crawlCommit(path, commit_hash, tmp_dir='tmp_dir'):
     res = {}
-    local_path = os.path.join("tmp_dir", path.split('/')[-2], path.split('/')[-1])
+    local_path = os.path.join(tmp_dir, path.split('/')[-2], path.split('/')[-1])
 
     if not os.path.exists(local_path):
         os.makedirs(local_path)
@@ -34,7 +34,7 @@ def crawlCommit(path, commit_hash):
             patch = str(t)
             break
     
-    repo = Repository(path, clone_repo_to= 'tmp_dir')
+    repo = Repository(local_path)
     for commit in repo.traverse_commits():
         # print(commit.hash)
         if commit.hash != commit_hash:
@@ -49,7 +49,7 @@ def crawlCommit(path, commit_hash):
 
     return res
 
-def parseCommit(url):
+def parseCommit(url, tmp_dir='tmp_dir'):
     nodes = url.split('/')
     path = []
     for node in nodes:
@@ -64,7 +64,7 @@ def parseCommit(url):
         "url" : url,
         "repo" : path,
         "hashcode" : commit_hash,
-        "modified_files" : crawlCommit(path, commit_hash)
+        "modified_files" : crawlCommit(path, commit_hash, tmp_dir)
     }
     return dict
 
@@ -97,7 +97,7 @@ def parseAffected(affected):
         # Product/Open source name
         aName = ""
         if 'packageName' in product.keys():
-            aName = product['package']
+            aName = product['packageName']
         if 'product' in product.keys():
             aName = product['product']
 
@@ -122,6 +122,8 @@ def parseAffected(affected):
         # Other attributes
         added_list = ['defaultStatus', 'packageName', 'product', 'vendor', 'collectionURL', 'versions']
         for k in product.keys():
+            if k in added_list:
+                continue
             pdict[k] = product[k]
 
         res.append(pdict)
@@ -129,8 +131,88 @@ def parseAffected(affected):
     return res
 
 
-def crawl_container(ctn):
+def crawl_container(ctn, tmp_dir='tmp_dir'):
+    
     container = {}
+
+    # Crawling header
+    if 'title' in ctn.keys():
+        container['title'] = ctn['title']
+    else:
+        container['title'] = 'N/A'
+
+    container['descriptions'] = []
+    if ('descriptions' not in ctn.keys()) or (len(ctn['descriptions']) == 0):
+        container['descriptions'].append({
+            'lang' : 'N/A',
+            'value' : 'N/A'
+        })
+    else:
+        for i in range(len(ctn['descriptions'])):
+            container['descriptions'].append({
+                'lang' : ctn['descriptions'][i]['lang'],
+                'value' : ctn['descriptions'][i]['value']
+            })
+
+    # Crawling metadata:
+    container['metadata'] = {}
+    container['metadata']['orgId'] = ctn['providerMetadata']['orgId']
+
+    if 'dateUpdated' in ctn['providerMetadata'].keys():
+        container['metadata']['dateUpdated'] = ctn['providerMetadata']['dateUpdated']
+    else:
+        container['metadata']['dateUpdated'] = 'N/A'
+
+    if 'dateAssigned' in ctn.keys():
+        container['metadata']['dateAssigned'] = ctn['dateAssigned']
+    else:
+        container['metadata']['dateAssigned'] = 'N/A'
+
+    if 'datePublic' in ctn.keys():
+        container['metadata']['datePublic'] = ctn['datePublic']
+    else:
+        container['metadata']['datePublic'] = 'N/A'
+
+    # Crawling impacts
+    container['impacts'] = []
+    if ('impacts' not in ctn.keys()) or (len(ctn['impacts']) == 0):
+        container['impacts'].append({
+            'capecId' : 'N/A',
+            'descriptions' : {
+                'lang' : 'N/A',
+                'value' : 'N/A'
+            }
+        })
+    else:
+        for i in range(len(ctn['impacts'])):
+            tmp = 'N/A'
+            if 'capecId' in ctn['impacts'][i].keys():
+                tmp = ctn['impacts'][i]['capecId']
+            tmp_vec = []
+            for j in range(len(ctn['impacts'][i]['descriptions'])):
+                tmp_vec.append({
+                    'lang' : ctn['impacts'][i]['descriptions'][j]['lang'],
+                    'value' : ctn['impacts'][i]['descriptions'][j]['value']
+                })
+            container['impacts'].append({
+                'capecId' : tmp,
+                'descriptions' : tmp_vec
+            })
+
+    # Crawling solutions
+    if 'solutions' not in ctn.keys():
+        container['solutions'] = [{
+        'lang' : 'N/A',
+        'value' : 'N/A'
+    }]
+
+    else:
+        container['solutions'] = []
+        for i in range(len(ctn['solutions'])):
+            container['solutions'].append({
+                'lang' : ctn['solutions'][i]['lang'],
+                'value' : ctn['solutions'][i]['value']
+            })
 
     # Crawling commits for vulnerable source code, patched version, software versions
     commits = []
@@ -138,7 +220,7 @@ def crawl_container(ctn):
         for url_dict in ctn['references']:
             url = url_dict['url']
             if "https://github.com/" in url and "/commit/" in url:
-                commits.append(parseCommit(url))
+                commits.append(parseCommit(url, tmp_dir))
     container['commits'] = commits
 
     # Crawling metrics
@@ -154,11 +236,29 @@ def crawl_container(ctn):
 
     return container
         
-
 def crawlPath(json_path, out_dir='data', out_file='data.json'):
     formatted_data = {}
-    with open(json_path, 'r') as file:
+    with open(json_path, 'r', encoding= 'utf8') as file:
         data = json.load(file)
+
+        # Check published status. REJECTED records are NOT crawled
+        if data['cveMetadata']['state'] == 'REJECTED':
+            file.close()
+            return "", ""
+        
+        # metadata crawling
+        formatted_data['cveMetadata'] = {}
+        formatted_data['cveMetadata']['cveId'] = data['cveMetadata']['cveId']
+        formatted_data['cveMetadata']['assignerOrgId'] = data['cveMetadata']['assignerOrgId']
+        if 'dateUpdated' in data['cveMetadata'].keys():
+            formatted_data['cveMetadata']['dateUpdated'] = data['cveMetadata']['dateUpdated']
+        else:
+            formatted_data['cveMetadata']['dateUpdated'] = 'N/A'
+        if 'datePublished' in data['cveMetadata'].keys():
+            formatted_data['cveMetadata']['datePublished'] = data['cveMetadata']['datePublished']
+        else:
+            formatted_data['cveMetadata']['datePublished'] = 'N/A'
+
         cna = data['containers']['cna']
         formatted_data['cna'] = crawl_container(cna)
         if 'adp' in data['containers'].keys():
@@ -166,9 +266,7 @@ def crawlPath(json_path, out_dir='data', out_file='data.json'):
             formatted_data['adp'] = crawl_container(adp)
         file.close()
 
-    with open(os.path.join(out_dir, out_file), 'a') as file:
-        json.dump(formatted_data, file, indent= 2)
-        file.close()
+    return formatted_data['cveMetadata']['cveId'], formatted_data
 
 class CVECrawler:
     def __init__(self, cve_dir, tmp_dir, out_dir='data', out_file='data.json'):
@@ -178,12 +276,21 @@ class CVECrawler:
         self.out_file = out_file
     
     def crawl(self):
+        cnt = 0
+        err = 0
+
         dirs = []
+        att_dirs = []
+        err_dirs = []
+        new_data = {}
         if not os.path.exists(self.out_dir):
             os.mkdir(self.out_dir)
 
-        for dir in os.listdir(self.cve_dir):
-            dirs.append(os.path.join(self.cve_dir, dir))
+        dirs.append(self.cve_dir)
+        if os.path.isdir(self.cve_dir):
+            dirs.pop()
+            for dir in os.listdir(self.cve_dir):
+                dirs.append(os.path.join(self.cve_dir, dir))
 
         while len(dirs) > 0:
             dir = dirs[-1]
@@ -194,12 +301,44 @@ class CVECrawler:
             else:
                 # json file found
                 if(dir.split('.')[-1] == 'json'):
+                    try:
+                        print(f"Crawling through {dir}")
+                        cveId, formatted_data = crawlPath(dir, self.out_dir, self.out_file)
+                        if len(cveId) == 0:
+                            continue
+                        new_data[cveId] = formatted_data
+                        cnt += 1
+                    except:
+                        print("An error occured. Attempt crawling this sample later ...")
+                        att_dirs.append(dir)
+                        err += 1
+                        continue
+
+        print("Re-attempting error files ...")
+
+        while len(att_dirs) > 0:
+            dir = att_dirs[-1]
+            att_dirs.pop()
+            # json file found
+            if(dir.split('.')[-1] == 'json'):
+                try:
                     print(f"Crawling through {dir} ...")
-                    crawlPath(dir, self.out_dir, self.out_file)
+                    cveId, formatted_data = crawlPath(dir, self.out_dir, self.out_file)
+                    if len(cveId) == 0:
+                        continue
+                    new_data[cveId] = formatted_data
+                    err -= 1
+                except:
+                    print("An error occured. Please check the error files after execution.")
+                    err_dirs.append(dir)
+                    continue
 
-# crawler = CVECrawler(
-#     cve_dir= 'cvelistV5-main/cves/2023/0xxx',
-#     tmp_dir= 'tmp_dir',
-# )
+        with open(os.path.join(self.out_dir, self.out_file), 'w', encoding= 'utf8') as file:
+            json.dump(new_data, file, indent= 2)
+            file.close()
 
-# crawler.crawl()
+        print(f"Crawling finished. {cnt}/{cnt + err} files have been successfully crawled.")
+        if err > 0:
+            print("The following files failed to be crawled : ")
+            for dir in err_dirs:
+                print(dir)
