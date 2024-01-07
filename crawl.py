@@ -7,7 +7,17 @@ from git import Repo
 ROOT = 'cvelistV5-main\cves'
 SAMPLE = os.path.join(ROOT, "2023", "50xxx", "CVE-2023-50249.json")
 
-print(SAMPLE)
+def chmod_recursive(path, mode):
+    # Code from ChatGPT
+    os.chmod(path, mode)
+    for root, dirs, files in os.walk(path):
+        os.chmod(root, mode)
+        for directory in dirs:
+            dir_path = os.path.join(root, directory)
+            os.chmod(dir_path, mode)
+        for file in files:
+            file_path = os.path.join(root, file)
+            os.chmod(file_path, mode)
 
 def crawlCommit(path, commit_hash, tmp_dir='tmp_dir'):
     res = {}
@@ -21,14 +31,19 @@ def crawlCommit(path, commit_hash, tmp_dir='tmp_dir'):
     else:
         repo = Repo.clone_from(path, local_path)
     
-    c_time = repo.commit(commit_hash).authored_datetime.timestamp()
+    c_time = repo.commit(commit_hash).authored_date
 
-    patch = ""
-    softver = ""
+    patch = "N/A"
+    softver = "N/A"
     for t in repo.tags:
-        ct = t.commit
+        try:
+            # If t is a non-commit object
+            ct = t.object.tagged_date
+        except:
+            # If t is a commit object
+            ct = t.commit.authored_date
 
-        if c_time >= ct.authored_datetime.timestamp():
+        if c_time >= ct:
             softver = str(t)
         else:
             patch = str(t)
@@ -269,15 +284,24 @@ def crawlPath(json_path, out_dir='data', out_file='data.json'):
     return formatted_data['cveMetadata']['cveId'], formatted_data
 
 class CVECrawler:
-    def __init__(self, cve_dir, tmp_dir, out_dir='data', out_file='data.json'):
+    def __init__(self, cve_dir, tmp_dir='tmp_dir', out_dir='data', out_file='data.json'):
         self.cve_dir = cve_dir
         self.tmp_dir = tmp_dir
         self.out_dir = out_dir
         self.out_file = out_file
+
+    def clean(self):
+        # print("Cleaning tmp_dir ...")
+        # for subdir in os.listdir(self.tmp_dir):
+        #     # chmod_recursive(os.path.join(self.tmp_dir, subdir), 0o777)
+        #     os.system(f'chmod -R 777 {os.path.join(self.tmp_dir, subdir)}')
+        #     shutil.rmtree(os.path.join(self.tmp_dir, subdir))
+        pass
     
     def crawl(self):
         cnt = 0
         err = 0
+        patience = 0
 
         dirs = []
         att_dirs = []
@@ -293,6 +317,11 @@ class CVECrawler:
                 dirs.append(os.path.join(self.cve_dir, dir))
 
         while len(dirs) > 0:
+            # Cleaning tmp_dir every 20 json files crawled
+            if patience == 20:
+                self.clean()
+                patience = 0
+            
             dir = dirs[-1]
             dirs.pop()
             if os.path.isdir(dir):
@@ -301,6 +330,7 @@ class CVECrawler:
             else:
                 # json file found
                 if(dir.split('.')[-1] == 'json'):
+                    patience += 1
                     try:
                         print(f"Crawling through {dir}")
                         cveId, formatted_data = crawlPath(dir, self.out_dir, self.out_file)
@@ -312,6 +342,7 @@ class CVECrawler:
                         print("An error occured. Attempt crawling this sample later ...")
                         att_dirs.append(dir)
                         err += 1
+                        self.clean()
                         continue
 
         print("Re-attempting error files ...")
@@ -331,6 +362,7 @@ class CVECrawler:
                 except:
                     print("An error occured. Please check the error files after execution.")
                     err_dirs.append(dir)
+                    self.clean()
                     continue
 
         with open(os.path.join(self.out_dir, self.out_file), 'w', encoding= 'utf8') as file:
