@@ -297,6 +297,45 @@ class CVECrawler:
         #     os.system(f'chmod -R 777 {os.path.join(self.tmp_dir, subdir)}')
         #     shutil.rmtree(os.path.join(self.tmp_dir, subdir))
         pass
+
+    def getCommitCount(self):
+        cnt = 0
+        nfiles = 0
+        for root, _, files in os.walk(self.cve_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                nfiles += 1
+                print(f"Investigating {file_path} ...")
+                with open(file_path, 'r', encoding= 'utf8') as file:
+                    data = json.load(file)
+
+                    if data['cveMetadata']['state'] == 'REJECTED':
+                        file.close()
+                        continue
+
+                ok = False
+                ctn = data['containers']['cna']
+                if 'references' in ctn.keys():
+                    for url_dict in ctn['references']:
+                        url = url_dict['url']
+                        if "https://github.com/" in url and "/commit/" in url:
+                            cnt += 1
+                            ok = True
+                            break
+                if ok:
+                    continue
+
+                if 'adp' in data['containers'].keys():
+                    ctn = data['containers']['adp']
+                    if 'references' in ctn.keys():
+                        for url_dict in ctn['references']:
+                            url = url_dict['url']
+                            if "https://github.com/" in url and "/commit/" in url:
+                                cnt += 1
+                                ok = True
+                                break
+
+        print(f"{cnt}/{nfiles} files has github commit data.")
     
     def crawl(self):
         cnt = 0
@@ -374,3 +413,10 @@ class CVECrawler:
             print("The following files failed to be crawled : ")
             for dir in err_dirs:
                 print(dir)
+
+
+crawler = CVECrawler(
+    cve_dir = 'cvelistV5-main/cves'
+)
+
+crawler.getCommitCount()
