@@ -8,6 +8,18 @@ Use `run.py` to crawl over .json files in `--cve-dir` directory and its sub-dire
 python run.py --cve_dir='cvelistV5-main' --tmp_dir='tmp_dir' --out_dir='data' --out_file='data.json'
 ```
 
+### Structure of a crawled record
+The resulting record consists of all crawled cve records compressed in a json file with `cveId` being the keys. Each `cveId` object is structured as below (mindmap generated using Mindmeister: https://www.mindmeister.com/) :
+<p align="center" width="100%">
+    <img width="70%" src="https://github.com/vhminh2210/CVECrawler/blob/main/cveMindMap.PNG"> 
+</p>
+
+**NOTE:**
+
+ - italic _items_ represent required fields in the corresponding branch. i.e., if the branch is available, the corresponding field must be available.
+ - Non-available fileds are replaced by 'N/A' or omitted from the corresponding branch
+ - `adp` is an optional container. If such container exists, it will share the structure of `cna` containers.
+
 ## Visualizing severity metrics
 Use `stats.py --json_dir --out_dir` to visualize:
  - `cvssV2.0, cvssV3.0, cvssV3.1` score histogram
