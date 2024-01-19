@@ -16,3 +16,18 @@ Use `stats.py --json_dir --out_dir` to visualize:
 Parameters:
  - `--json_dir`: CVE crawled files in CVECrawler format
  - `--out_dir` : Exporting folder
+
+Sample command:
+```
+python stats.py --out_dir='stats' --json_dir='cveV5_2023_0xxx.json'
+```
+
+_**Sample score histogram:**_
+<p align="left" width="100%">
+    <img width="50%" src="https://github.com/vhminh2210/CVECrawler/blob/main/images/cvssV3_1.png"> 
+</p>
+
+_**Sample vector string histogram:**_
+<p align="left" width="100%">
+    <img width="50%" src="https://github.com/vhminh2210/CVECrawler/blob/main/images/C.png"> 
+</p>
