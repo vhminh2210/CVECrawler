@@ -62,6 +62,9 @@ def crawlCommit(path, commit_hash, tmp_dir='tmp_dir'):
             } 
         break
 
+    if len(res.keys()) == 0:
+        res = 'N/A'
+
     return res
 
 def parseCommit(url, tmp_dir='tmp_dir'):
@@ -113,15 +116,19 @@ def parseAffected(affected):
         aName = ""
         if 'packageName' in product.keys():
             aName = product['packageName']
-        if 'product' in product.keys():
+        elif 'product' in product.keys():
             aName = product['product']
+        else:
+            aName = 'N/A'
 
         # Vendor/URL
         source = ""
         if 'vendor' in product.keys():
             source = product['vendor']
-        if 'collectionURL' in product.keys():
+        elif 'collectionURL' in product.keys():
             source = product['collectionURL']
+        else:
+            source = 'N/A'
 
         # Version windows, following CVE format
         pdict = {
@@ -173,11 +180,6 @@ def crawl_container(ctn, tmp_dir='tmp_dir'):
     container['metadata'] = {}
     container['metadata']['orgId'] = ctn['providerMetadata']['orgId']
 
-    if 'dateUpdated' in ctn['providerMetadata'].keys():
-        container['metadata']['dateUpdated'] = ctn['providerMetadata']['dateUpdated']
-    else:
-        container['metadata']['dateUpdated'] = 'N/A'
-
     if 'dateAssigned' in ctn.keys():
         container['metadata']['dateAssigned'] = ctn['dateAssigned']
     else:
@@ -193,10 +195,10 @@ def crawl_container(ctn, tmp_dir='tmp_dir'):
     if ('impacts' not in ctn.keys()) or (len(ctn['impacts']) == 0):
         container['impacts'].append({
             'capecId' : 'N/A',
-            'descriptions' : {
+            'descriptions' : [{
                 'lang' : 'N/A',
                 'value' : 'N/A'
-            }
+            }]
         })
     else:
         for i in range(len(ctn['impacts'])):
@@ -243,11 +245,17 @@ def crawl_container(ctn, tmp_dir='tmp_dir'):
         metric_dict = parseMetrics(ctn['metrics'])
         if metric_dict != None:
             container['metrics'] = metric_dict
+        else:
+            container['metrics'] = 'N/A'
+    else:
+        container['metrics'] = 'N/A'
 
     # Relevent exploit info: Crawling affected products
     if 'affected' in ctn.keys():
         affected_dict = parseAffected(ctn['affected'])
         container['affected'] = affected_dict
+    else:
+        container['affected'] = 'N/A'
 
     return container
         
@@ -264,6 +272,7 @@ def crawlPath(json_path, out_dir='data', out_file='data.json'):
         # metadata crawling
         formatted_data['cveMetadata'] = {}
         formatted_data['cveMetadata']['cveId'] = data['cveMetadata']['cveId']
+        formatted_data['cveMetadata']['cveURL'] = f"https://www.cve.org/CVERecord?id={formatted_data['cveMetadata']['cveId']}"
         formatted_data['cveMetadata']['assignerOrgId'] = data['cveMetadata']['assignerOrgId']
         if 'dateUpdated' in data['cveMetadata'].keys():
             formatted_data['cveMetadata']['dateUpdated'] = data['cveMetadata']['dateUpdated']
