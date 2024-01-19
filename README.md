@@ -17,7 +17,7 @@ Parameters:
  - `--json_dir`: CVE crawled files in CVECrawler format
  - `--out_dir` : Exporting folder
 
-Sample command:
+_**Sample command:**_
 ```
 python stats.py --out_dir='stats' --json_dir='cveV5_2023_0xxx.json'
 ```
