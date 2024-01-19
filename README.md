@@ -12,6 +12,7 @@ python run.py --cve_dir='cvelistV5-main' --tmp_dir='tmp_dir' --out_dir='data' --
 Use `stats.py --json_dir --out_dir` to visualize:
  - `cvssV2.0, cvssV3.0, cvssV3.1` score histogram
  - `cvssV3.1` vector string histogram
+
 Parameters:
  - `--json_dir`: CVE crawled files in CVECrawler format
  - `--out_dir` : Exporting folder
