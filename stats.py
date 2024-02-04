@@ -64,7 +64,7 @@ def plotDfFea(df, FEATURE, out_dir='stats'):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CVE dataset stats script')
-    parser.add_argument('--json_dir', default='cveV5_2023_0xxx.json', help='JSON path')
+    parser.add_argument('--json_dir', default='data2023.json', help='JSON path')
     parser.add_argument('--out_dir', default= 'stats', help='Output directory for saving stats')
 
     args, _ = parser.parse_known_args()
@@ -91,10 +91,15 @@ if __name__ == '__main__':
         if 'metrics' not in ctn.keys():
             continue
         for metric in ctn['metrics']:
+            if type(metric) != dict:
+                continue
             score_dict[metric['scoreType']].append(metric['baseScore'])
     
-        if metric['scoreType'] == 'cvssV3_1':
-            vector_list.append(extractVector(metric['vectorString']))
+            if metric['scoreType'] == 'cvssV3_1':
+                vector = extractVector(metric['vectorString'])
+                if vector is None:
+                    continue
+                vector_list.append(vector)
     
     # Plot score frequency
     for key, value in reversed(score_dict.items()):
