@@ -1,5 +1,5 @@
 # CVECrawler
-A crawling tool for CVE datasets: https://www.cve.org/About/Overview. The input data can be downloaded from: https://github.com/CVEProject/cvelistV5/tree/main/cves
+A crawling tool for CVE datasets: https://www.cve.org/About/Overview. The input data can be downloaded from: https://github.com/CVEProject/cvelistV5/tree/main
 
 Our crawler requires Python >= 3.10.13.
 
