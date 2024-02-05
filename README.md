@@ -5,7 +5,7 @@ A crawling tool for CVE datasets: https://www.cve.org/About/Overview
 Use `run.py` to crawl over .json files in `--cve-dir` directory and its sub-directories. The results will be exported to `--out_dir/--out_file`. For example, suppose `--out_dir=data` and `--out_file=data.json`, the crawling results will be dumped into `data/data.json`. For investigating commit source code, a folder `--tmp_dir` will be provided to clone corresponding repos to local machine. Sample command to crawl a CVE directory with default parameters:
 
 ```
-python run.py --cve_dir='cvelistV5-main' --tmp_dir='tmp_dir' --out_dir='data' --out_file='data.json'
+python run.py --cve_dir='path/to/cve' --tmp_dir='path/to/tmp_dir' --out_dir='path/to/out_dir' --out_file='.json'
 ```
 
 ### Structure of a crawled record
@@ -31,7 +31,7 @@ Parameters:
 
 _**Sample command:**_
 ```
-python stats.py --out_dir='stats' --json_dir='cveV5_2023_0xxx.json'
+python stats.py --out_dir='path/to/stats' --json_dir='.json'
 ```
 
 _**Sample score histogram:**_
