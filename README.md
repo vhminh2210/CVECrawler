@@ -1,5 +1,7 @@
 # CVECrawler
-A crawling tool for CVE datasets: https://www.cve.org/About/Overview 
+A crawling tool for CVE datasets: https://www.cve.org/About/Overview. The data can be downloaded from: https://github.com/CVEProject/cvelistV5/tree/main/cves
+
+Our crawler requires Python >= 3.10.13.
 
 ## Crawling a CVE directory
 Use `run.py` to crawl over .json files in `--cve-dir` directory and its sub-directories. The results will be exported to `--out_dir/--out_file`. For example, suppose `--out_dir=data` and `--out_file=data.json`, the crawling results will be dumped into `data/data.json`. For investigating commit source code, a folder `--tmp_dir` will be provided to clone corresponding repos to local machine. Sample command to crawl a CVE directory with default parameters:
